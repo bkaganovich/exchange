@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+
+# File: exchange
+# Currency exchange rate conversion using fixer.io JSON API
+
+##########################################
+# Update apikey.txt with your APILayer key
+##########################################
+
+import sys
+import requests
+import json
+
+def display_help():
+    print('Usage: ./exchange [AMOUNT] [FROM] [TO]\n')
+    print('Example:\n./exchange 100 eur usd\t\t# Convert 100 EUR to USD\n')
+    print('Options:')
+    t3 = '\t'*3
+    print(f'-l, --list{t3}Display currency symbols list and quit.')
+    print(f'-h, --help{t3}Display this help menu and quit.')
+    sys.exit()
+
+def api_call(fixerurl):
+    url = fixerurl
+    payload = {}
+    apikey = open('apikey.txt', 'r')
+    key = apikey.read().rstrip('\n')
+    apikey.close()
+    headers = { "apikey": key }
+    response = requests.request('GET', url, headers=headers, data=payload)
+    status_code = response.status_code
+    result = response.text
+    global data
+    data = json.loads(result)
+
+def get_list():
+    url = "https://api.apilayer.com/fixer/symbols"
+    api_call(url)
+    symbs = data['symbols']
+    keys = list(symbs.keys())
+
+    for i in range(0,len(keys),2):
+        lkey = keys[i]
+        rkey = keys[i+1]
+        print('%3s: %-38s %s: %s' %(lkey, symbs[lkey], rkey, symbs[rkey]))
+
+    sys.exit()
+
+def get_rate():
+    url = f'https://api.apilayer.com/fixer/convert?to={to_curr}' \
+        f'&from={from_curr}&amount={amount}'
+    api_call(url)
+    print(f'{curr(amount)} {up(from_curr)} = {curr(data["result"])} {up(to_curr)}')
+
+def check_argv():
+    global amount, from_curr, to_curr
+    
+    if len(sys.argv) == 1:
+        display_help()
+    elif sys.argv[1] in ("-l", "--list"):
+        get_list()
+    elif len(sys.argv) == 4:
+        amount = sys.argv[1]
+        from_curr = sys.argv[2]
+        to_curr = sys.argv[3]
+        get_rate()
+    else:
+        display_help()
+
+def up(sym):
+    return sym.upper()
+
+def curr(x):
+    return format(float(x), '.2f')
+
+def main():
+    check_argv()
+
+main()
